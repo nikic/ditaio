@@ -54,11 +54,24 @@ function stackedCoroutine(Generator $gen) {
                 continue;
             }
 
-            $gen->send(yield $gen->key() => $value);
-        } catch (Exception $e) {
-            if ($exception !== null) {
-                $gen = $this->stack->pop();
+            if ($value instanceof CoroutinePlainValue) {
+                $value = $value->getValue();
             }
+
+            try {
+                $sendValue = (yield $gen->key() => $value);
+            } catch (Exception $e) {
+                $gen->throw($e);
+                continue;
+            }
+
+            $gen->send($sendValue);
+        } catch (Exception $e) {
+            if ($stack->isEmpty()) {
+                throw $e;
+            }
+
+            $gen = $stack->pop();
             $exception = $e;
         }
     }
